@@ -27,9 +27,13 @@ def index():
 @socketio.on("join_random")
 def join_random():
 
+    print("join_random 호출됨")
+
     global waiting_player
 
     sid = request.sid
+
+    print("현재 SID:", sid)
 
     if waiting_player is None:
 
@@ -46,8 +50,8 @@ def join_random():
             )
         )
 
-        join_room(room, waiting_player)
-        join_room(room, sid)
+        join_room(room, sid=waiting_player)
+        join_room(room, sid=sid)
 
         rooms_data[room] = {
             "red": waiting_player,
@@ -74,14 +78,17 @@ def join_random():
 
         waiting_player = None
 
-
 # =========================
 # 친선전 생성
 # =========================
 @socketio.on("create_room")
 def create_room():
 
+    print("create_room 호출됨")
+
     sid = request.sid
+
+    print("방 생성 SID:",sid)
 
     room = ''.join(
         random.choices(
@@ -90,7 +97,7 @@ def create_room():
         )
     )
 
-    join_room(room)
+    join_room(room, sid=sid)
 
     rooms_data[room] = {
         "red": sid,
@@ -112,7 +119,13 @@ def create_room():
 @socketio.on("join_room_custom")
 def join_room_custom(data):
 
+    print("join_room_custom 호출됨")
+
     sid = request.sid
+
+    print("참가 SID:",sid)
+
+    print("입력 코드:",data["room"])
 
     room = data["room"]
 
@@ -128,7 +141,7 @@ def join_room_custom(data):
 
         return
 
-    join_room(room)
+    join_room(room, sid=sid)
 
     rooms_data[room]["blue"] = sid
 
@@ -229,6 +242,5 @@ if __name__ == "__main__":
     socketio.run(
         app,
         host="0.0.0.0",
-        port=5000,
-        debug=True
+        port=5000
     )
