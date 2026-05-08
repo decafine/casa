@@ -71,6 +71,11 @@ def make_move(data):
         include_self=False
     )
 
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode="eventlet"
+)
 
 @socketio.on("disconnect")
 def on_disconnect():
@@ -84,6 +89,9 @@ def on_disconnect():
 
     print(f"{sid} disconnected")
 
-
 if __name__ == "__main__":
-    socketio.run(app)
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=5000
+    )
