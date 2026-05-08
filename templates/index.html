@@ -8,36 +8,146 @@
 <style>
 body{
     margin:0;
-    background:#222;
+    background:#1b1b1b;
     color:white;
     font-family:sans-serif;
 
     display:flex;
     flex-direction:column;
     align-items:center;
+
+    overflow:hidden;
 }
 
 #turnText{
-    margin:20px;
+    margin:12px;
     font-size:32px;
     font-weight:bold;
 }
 
 #game{
+    width:100vw;
+    height:calc(100vh - 80px);
+
     display:flex;
-    gap:30px;
+    justify-content:center;
     align-items:center;
+
+    gap:24px;
+
+    padding:20px;
+
+    box-sizing:border-box;
 }
 
 #board{
-    width:80vmin;
-    height:80vmin;
+    width:min(78vh,78vw);
+    height:min(78vh,78vw);
 
     display:grid;
+
     grid-template-columns:repeat(10,1fr);
     grid-template-rows:repeat(10,1fr);
 
     border:4px solid white;
+
+    flex-shrink:0;
+}
+
+#sidePanel{
+
+    width:280px;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:16px;
+}
+
+#statusBox{
+
+    display:flex;
+    flex-direction:column;
+
+    gap:12px;
+}
+
+#matchStatus,
+#roomCodeView{
+
+    background:#111;
+
+    border:2px solid #444;
+
+    border-radius:12px;
+
+    padding:14px;
+
+    font-size:20px;
+    font-weight:bold;
+
+    text-align:center;
+
+    box-shadow:
+    0 0 12px rgba(0,0,0,0.5);
+}
+
+button{
+
+    height:56px;
+
+    border:none;
+    border-radius:12px;
+
+    font-size:18px;
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:0.15s;
+}
+
+button:hover{
+
+    transform:scale(1.03);
+
+}
+
+#randomMatchBtn{
+
+    background:#00bcd4;
+    color:white;
+}
+
+#friendlyBtn{
+
+    background:#ff9800;
+    color:white;
+}
+
+#joinRoomBtn{
+
+    background:#4caf50;
+    color:white;
+}
+
+#roomInput{
+
+    height:52px;
+
+    border:none;
+    outline:none;
+
+    border-radius:12px;
+
+    padding:0 14px;
+
+    background:#2a2a2a;
+    color:white;
+
+    font-size:18px;
+
+    box-sizing:border-box;
 }
 
 .cell{
@@ -113,25 +223,8 @@ body{
 }
 
 .stunned{
-    filter:grayscale(100%) brightness(0.7);
-}
-
-#removeZone{
-    width:140px;
-    height:140px;
-
-    background:#111;
-
-    border:4px solid red;
-
-    display:flex;
-    justify-content:center;
-    align-items:center;
-
-    font-size:32px;
-    font-weight:bold;
-
-    box-shadow:0 0 20px red;
+    filter:grayscale(100%)
+    brightness(0.7);
 }
 
 #statusBox{
@@ -170,47 +263,44 @@ body{
 const socket = io();
 </script>
 <body>
-
-<div id="statusBox">
-
-    <div id="matchStatus">
-        상태 : 대기중
-    </div>
-
-    <div id="roomCodeView">
-        방 코드 : 없음
-    </div>
-
-</div>
-
-<button id="randomMatchBtn">
-랜덤 매치
-</button>
-
-<button id="friendlyBtn">
-친선전 생성
-</button>
-
-<div id="roomCodeText"></div>
-
-<input id="roomInput" placeholder="방 코드">
-
-<button id="joinRoomBtn">
-친선전 참가
-</button>
-
-<div id="turnText"></div>
-
 <div id="game">
 
     <div id="board"></div>
 
-    <div id="removeZone">
-        제거
+    <div id="sidePanel">
+
+        <div id="statusBox">
+
+            <div id="matchStatus">
+                상태 : 대기중
+            </div>
+
+            <div id="roomCodeView">
+                방 코드 : 없음
+            </div>
+
+        </div>
+
+        <button id="randomMatchBtn">
+            랜덤 매치
+        </button>
+
+        <button id="friendlyBtn">
+            친선전 생성
+        </button>
+
+        <input
+            id="roomInput"
+            placeholder="방 코드 입력"
+        >
+
+        <button id="joinRoomBtn">
+            친선전 참가
+        </button>
+
     </div>
 
 </div>
-
 <script>
 
 /* 기물 생성 */
