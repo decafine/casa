@@ -141,6 +141,20 @@ const socket = io();
 </script>
 <body>
 
+<button id="randomMatchBtn">
+랜덤 매치
+</button>
+
+<button id="friendlyBtn">
+친선전 생성
+</button>
+
+<input id="roomInput" placeholder="방 코드">
+
+<button id="joinRoomBtn">
+친선전 참가
+</button>
+
 <div id="turnText"></div>
 
 <div id="game">
@@ -250,6 +264,10 @@ let currentTurn = "red";
 
 let selected = null;
 let validMoves = [];
+
+let onlineMode = false;
+let myTeam = null;
+let currentRoom = null;
 
 /* 턴 표시 */
 function updateTurnText(){
@@ -770,6 +788,13 @@ function drawBoard(){
             /* 클릭 */
             cell.addEventListener("click",()=>{
 
+                if(
+    onlineMode &&
+    currentTurn !== myTeam
+){
+    return;
+}
+
                 /* 이동 */
                 if(
                     selected &&
@@ -849,6 +874,95 @@ function drawBoard(){
     }
 
 }
+
+document
+.getElementById("randomMatchBtn")
+.onclick = ()=>{
+
+    socket.emit("join_random");
+
+};
+
+document
+.getElementById("friendlyBtn")
+.onclick = ()=>{
+
+    socket.emit("create_room");
+
+};
+
+document
+.getElementById("joinRoomBtn")
+.onclick = ()=>{
+
+    const code =
+    document
+    .getElementById("roomInput")
+    .value;
+
+    socket.emit("join_room_custom",{
+        room:code
+    });
+
+};
+
+socket.on("matched",(data)=>{
+
+    onlineMode = true;
+
+    currentRoom = data.room;
+
+    alert("매치 완료");
+
+});
+
+if(onlineMode){
+
+    socket.emit("make_move",{
+
+        room:currentRoom,
+
+        boardData:boardData,
+
+        currentTurn:currentTurn
+
+    });
+
+}
+
+socket.on("opponent_move",(data)=>{
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            boardData[y][x] =
+            data.boardData[y][x];
+
+        }
+    }
+
+    currentTurn =
+    data.currentTurn;
+
+    drawBoard();
+    updateTurnText();
+
+});
+
+socket.on("matched",(data)=>{
+
+    onlineMode = true;
+
+    currentRoom = data.room;
+
+    myTeam = data.team;
+
+    alert(
+        "매치 완료 / 내 팀 : "
+        + myTeam
+    );
+
+});
 
 updateTurnText();
 drawBoard();

@@ -34,6 +34,24 @@ def generate_room_code(length=6):
         for _ in range(length)
     )
 
+socketio.emit(
+    "matched",
+    {
+        "room":room,
+        "team":"red"
+    },
+    room=waiting_player
+)
+
+socketio.emit(
+    "matched",
+    {
+        "room":room,
+        "team":"blue"
+    },
+    room=sid
+)
+
 
 # -----------------------------
 # 랜덤 매칭
@@ -72,6 +90,54 @@ def join_random():
 
         waiting_player = None
 
+
+@socketio.on("create_room")
+def create_room():
+
+    room = generate_room_code()
+
+    rooms[room] = {
+        "players":[request.sid]
+    }
+
+    join_room(room)
+
+    emit("room_created",{
+        "room":room
+    })
+
+@socketio.on("join_room_custom")
+def join_room_custom(data):
+
+    room = data["room"]
+
+    if room not in rooms:
+
+        emit("error_message",{
+            "message":"방 없음"
+        })
+
+        return
+
+    if len(rooms[room]["players"]) >= 2:
+
+        emit("error_message",{
+            "message":"방 꽉참"
+        })
+
+        return
+
+    rooms[room]["players"].append(
+        request.sid
+    )
+
+    join_room(room)
+
+    socketio.emit(
+        "matched",
+        {"room":room},
+        room=room
+    )
 
 # -----------------------------
 # 상대에게 이동 전달
