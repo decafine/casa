@@ -287,6 +287,14 @@ function updateTurnText(){
 
     }
 
+
+if(onlineMode){
+
+    turnText.innerText +=
+    " / 내 팀 : " + myTeam;
+
+}
+
 }
 
 /* 범위 */
@@ -842,7 +850,21 @@ function drawBoard(){
 
                     drawBoard();
 
-                    return;
+                    if(onlineMode){
+
+    socket.emit("make_move",{
+
+        room:currentRoom,
+
+        boardData:boardData,
+
+        currentTurn:currentTurn
+
+    });
+
+    return;
+
+}
 
                 }
 
@@ -897,10 +919,12 @@ document
 .getElementById("joinRoomBtn")
 .onclick = ()=>{
 
-    const code =
-    document
-    .getElementById("roomInput")
-    .value;
+const code =
+document
+.getElementById("roomInput")
+.value
+.trim()
+.toUpperCase();
 
     socket.emit("join_room_custom",{
         room:code
@@ -914,23 +938,33 @@ socket.on("matched",(data)=>{
 
     currentRoom = data.room;
 
-    alert("매치 완료");
+    myTeam = data.team;
+
+    updateTurnText();
+
+    alert(
+        "매치 완료 / 내 팀 : "
+        + myTeam
+    );
 
 });
 
-if(onlineMode){
+socket.on("room_created",(data)=>{
 
-    socket.emit("make_move",{
+    currentRoom = data.room;
 
-        room:currentRoom,
+    myTeam = "red";
 
-        boardData:boardData,
+    onlineMode = true;
 
-        currentTurn:currentTurn
+    document
+    .getElementById("roomCodeText")
+    .innerText =
+    "방 코드 : " + data.room;
 
-    });
+    updateTurnText();
 
-}
+});
 
 socket.on("opponent_move",(data)=>{
 
@@ -944,30 +978,15 @@ socket.on("opponent_move",(data)=>{
     }
 
     currentTurn =
-    data.currentTurn;
+data.currentTurn;
 
-    drawBoard();
-    updateTurnText();
+selected = null;
+validMoves = [];
 
-});
+drawBoard();
+updateTurnText();
 
-socket.on("matched",(data)=>{
 
-    onlineMode = true;
-
-    currentRoom = data.room;
-
-    myTeam = data.team;
-
-    alert(
-        "매치 완료 / 내 팀 : "
-        + myTeam
-    );
-
-});
-
-socket.emit("join_room_custom",{
-    room:code
 });
 
 updateTurnText();
@@ -977,4 +996,3 @@ drawBoard();
 
 </body>
 </html>
-```
