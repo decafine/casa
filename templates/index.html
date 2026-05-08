@@ -133,6 +133,36 @@ body{
 
     box-shadow:0 0 20px red;
 }
+
+#statusBox{
+
+    margin:15px;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:10px;
+
+    align-items:center;
+}
+
+#matchStatus,
+#roomCodeView{
+
+    padding:10px 20px;
+
+    background:#111;
+
+    border:2px solid #555;
+
+    border-radius:10px;
+
+    font-size:20px;
+
+    min-width:240px;
+
+    text-align:center;
+}
 </style>
 </head>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -140,6 +170,18 @@ body{
 const socket = io();
 </script>
 <body>
+
+<div id="statusBox">
+
+    <div id="matchStatus">
+        상태 : 대기중
+    </div>
+
+    <div id="roomCodeView">
+        방 코드 : 없음
+    </div>
+
+</div>
 
 <button id="randomMatchBtn">
 랜덤 매치
@@ -940,6 +982,12 @@ socket.on("matched",(data)=>{
 
     myTeam = data.team;
 
+    matchStatus.innerText =
+    "상태 : 게임중";
+
+    roomCodeView.innerText =
+    "방 코드 : " + data.room;
+
     updateTurnText();
 
     alert(
@@ -957,9 +1005,10 @@ socket.on("room_created",(data)=>{
 
     onlineMode = true;
 
-    document
-    .getElementById("roomCodeText")
-    .innerText =
+    matchStatus.innerText =
+    "상태 : 상대 대기중";
+
+    roomCodeView.innerText =
     "방 코드 : " + data.room;
 
     updateTurnText();
@@ -988,6 +1037,64 @@ updateTurnText();
 
 
 });
+
+const matchStatus =
+document.getElementById("matchStatus");
+
+const roomCodeView =
+document.getElementById("roomCodeView");
+
+document
+.getElementById("randomMatchBtn")
+.onclick = ()=>{
+
+    matchStatus.innerText =
+    "상태 : 매칭중...";
+
+    roomCodeView.innerText =
+    "방 코드 : 랜덤";
+
+    socket.emit("join_random");
+
+};
+
+document
+.getElementById("friendlyBtn")
+.onclick = ()=>{
+
+    matchStatus.innerText =
+    "상태 : 방 생성중...";
+
+    socket.emit("create_room");
+
+};
+
+document
+.getElementById("joinRoomBtn")
+.onclick = ()=>{
+
+    const code =
+    document
+    .getElementById("roomInput")
+    .value
+    .trim()
+    .toUpperCase();
+
+    if(!code){
+        return;
+    }
+
+    matchStatus.innerText =
+    "상태 : 참가 시도중...";
+
+    roomCodeView.innerText =
+    "방 코드 : " + code;
+
+    socket.emit("join_room_custom",{
+        room:code
+    });
+
+};
 
 updateTurnText();
 drawBoard();
