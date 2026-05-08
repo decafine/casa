@@ -145,11 +145,11 @@ const socket = io();
 랜덤 매치
 </button>
 
-빅나티
-
 <button id="friendlyBtn">
 친선전 생성
 </button>
+
+<div id="roomCodeText"></div>
 
 <input id="roomInput" placeholder="방 코드">
 
@@ -964,6 +964,10 @@ socket.on("matched",(data)=>{
         + myTeam
     );
 
+});
+
+socket.emit("join_room_custom",{
+    room:code
 });
 
 updateTurnText();
