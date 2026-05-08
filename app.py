@@ -9,8 +9,7 @@ app.config["SECRET_KEY"] = "casa_secret"
 
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
-    async_mode="eventlet"
+    cors_allowed_origins="*"
 )
 
 waiting_player = None
