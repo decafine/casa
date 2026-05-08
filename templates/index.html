@@ -1,0 +1,856 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Casa</title>
+
+<style>
+body{
+    margin:0;
+    background:#222;
+    color:white;
+    font-family:sans-serif;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+#turnText{
+    margin:20px;
+    font-size:32px;
+    font-weight:bold;
+}
+
+#game{
+    display:flex;
+    gap:30px;
+    align-items:center;
+}
+
+#board{
+    width:80vmin;
+    height:80vmin;
+
+    display:grid;
+    grid-template-columns:repeat(10,1fr);
+    grid-template-rows:repeat(10,1fr);
+
+    border:4px solid white;
+}
+
+.cell{
+    position:relative;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    border:1px solid #555;
+}
+
+.white{
+    background:#d8d8d8;
+}
+
+.black{
+    background:#666;
+}
+
+.redCell::after,
+.blueCell::after{
+    content:"";
+
+    position:absolute;
+
+    width:75%;
+    height:75%;
+
+    border-radius:50%;
+
+    z-index:0;
+}
+
+.redCell::after{
+    background:rgba(255,0,0,0.35);
+}
+
+.blueCell::after{
+    background:rgba(0,150,255,0.35);
+}
+
+.moveable::before{
+    content:"";
+
+    position:absolute;
+
+    width:30%;
+    height:30%;
+
+    border-radius:50%;
+
+    background:lime;
+
+    z-index:2;
+}
+
+.selected{
+    outline:4px solid yellow;
+    z-index:3;
+}
+
+.piece{
+    width:80%;
+    height:80%;
+
+    object-fit:contain;
+
+    position:relative;
+    z-index:1;
+
+    user-select:none;
+}
+
+.stunned{
+    filter:grayscale(100%) brightness(0.7);
+}
+
+#removeZone{
+    width:140px;
+    height:140px;
+
+    background:#111;
+
+    border:4px solid red;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    font-size:32px;
+    font-weight:bold;
+
+    box-shadow:0 0 20px red;
+}
+</style>
+</head>
+<body>
+
+<div id="turnText"></div>
+
+<div id="game">
+
+    <div id="board"></div>
+
+    <div id="removeZone">
+        제거
+    </div>
+
+</div>
+
+<script>
+
+/* 기물 생성 */
+function makePiece(type,team){
+
+    return {
+        type:type,
+        team:team,
+
+        stun:0,
+        commandCooldown:0
+    };
+
+}
+
+/* 보드 */
+const boardData = [
+
+[
+makePiece("C","blue"),
+makePiece("F","blue"),
+makePiece("S","blue"),
+makePiece("A","blue"),
+makePiece("E","blue"),
+makePiece("M","blue"),
+makePiece("A","blue"),
+makePiece("S","blue"),
+makePiece("F","blue"),
+makePiece("C","blue")
+],
+
+[
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue"),
+makePiece("P","blue")
+],
+
+["X","X","X","X","X","X","X","X","X","X"],
+["X","X","X","X","X","X","X","X","X","X"],
+["X","X","X","X","X","X","X","X","X","X"],
+["X","X","X","X","X","X","X","X","X","X"],
+["X","X","X","X","X","X","X","X","X","X"],
+["X","X","X","X","X","X","X","X","X","X"],
+
+[
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red"),
+makePiece("P","red")
+],
+
+[
+makePiece("C","red"),
+makePiece("F","red"),
+makePiece("S","red"),
+makePiece("A","red"),
+makePiece("E","red"),
+makePiece("M","red"),
+makePiece("A","red"),
+makePiece("S","red"),
+makePiece("F","red"),
+makePiece("C","red")
+]
+
+];
+
+/* 이미지 */
+const pieceImages = {
+    C: "https://i.ibb.co/39pkvqk2/C-removebg-preview.png",
+    F: "https://i.ibb.co/chVxvZFm/F-removebg-preview.png",
+    S: "https://i.ibb.co/twmw3x1t/S-removebg-preview.png",
+    A: "https://i.ibb.co/9mdrLybQ/A-removebg-preview.png",
+    E: "https://i.ibb.co/8D83vSz9/E-removebg-preview.png",
+    M: "https://i.ibb.co/mrTfVSnw/M-removebg-preview.png",
+    P: "https://i.ibb.co/bgFbccZX/P-removebg-preview.png"
+};
+
+const board = document.getElementById("board");
+const turnText = document.getElementById("turnText");
+
+let currentTurn = "red";
+
+let selected = null;
+let validMoves = [];
+
+/* 턴 표시 */
+function updateTurnText(){
+
+    if(currentTurn==="blue"){
+
+        turnText.innerText = "흑청 턴";
+        turnText.style.color = "cyan";
+
+    }
+    else{
+
+        turnText.innerText = "백적 턴";
+        turnText.style.color = "red";
+
+    }
+
+}
+
+/* 범위 */
+function inside(x,y){
+
+    return x>=0 && x<10 && y>=0 && y<10;
+
+}
+
+/* 에미르 인접 */
+function hasAdjacentEmir(x,y,team){
+
+    for(let dx=-1;dx<=1;dx++){
+        for(let dy=-1;dy<=1;dy++){
+
+            if(dx===0 && dy===0) continue;
+
+            const nx = x+dx;
+            const ny = y+dy;
+
+            if(!inside(nx,ny)) continue;
+
+            const target = boardData[ny][nx];
+
+            if(
+                target!=="X" &&
+                target.team===team &&
+                target.type==="E"
+            ){
+                return true;
+            }
+
+        }
+    }
+
+    return false;
+
+}
+
+/* 턴 넘김 */
+function nextTurn(){
+
+    currentTurn =
+    currentTurn==="red"
+    ? "blue"
+    : "red";
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            const piece = boardData[y][x];
+
+            if(piece==="X") continue;
+
+            if(piece.stun>0){
+                piece.stun--;
+            }
+
+            if(piece.commandCooldown>0){
+                piece.commandCooldown--;
+            }
+
+        }
+    }
+
+    updateTurnText();
+
+}
+
+/* 이동 계산 */
+function getValidMoves(x,y){
+
+    const piece = boardData[y][x];
+
+    if(piece==="X") return [];
+
+    if(piece.stun>0) return [];
+
+    const moves = [];
+
+    const team = piece.team;
+
+    const dir = team==="red" ? -1 : 1;
+
+    function push(nx,ny){
+
+        if(!inside(nx,ny)) return;
+
+        const target = boardData[ny][nx];
+
+        if(target==="X"){
+
+            moves.push({
+                x:nx,
+                y:ny
+            });
+
+        }
+        else if(target.team !== team){
+
+            moves.push({
+                x:nx,
+                y:ny,
+                attack:true
+            });
+
+        }
+
+    }
+
+    /* 말리크 */
+    if(piece.type==="M"){
+
+        for(let dx=-1;dx<=1;dx++){
+            for(let dy=-1;dy<=1;dy++){
+
+                if(dx===0 && dy===0) continue;
+
+                push(x+dx,y+dy);
+
+            }
+        }
+
+    }
+
+    /* 마르카바 */
+    if(piece.type==="C"){
+
+        const dirs = [
+            [1,0],[-1,0],
+            [0,1],[0,-1]
+        ];
+
+        for(const d of dirs){
+
+            let nx = x+d[0];
+            let ny = y+d[1];
+
+            while(inside(nx,ny)){
+
+                const target = boardData[ny][nx];
+
+                if(target==="X"){
+
+                    moves.push({
+                        x:nx,
+                        y:ny
+                    });
+
+                }
+                else{
+
+                    if(target.team!==team){
+
+                        moves.push({
+                            x:nx,
+                            y:ny,
+                            attack:true
+                        });
+
+                    }
+
+                    break;
+
+                }
+
+                nx += d[0];
+                ny += d[1];
+
+            }
+
+        }
+
+    }
+
+    /* 파리스 */
+    if(piece.type==="F"){
+
+        const knight = [
+            [1,2],[2,1],
+            [-1,2],[-2,1],
+            [1,-2],[2,-1],
+            [-1,-2],[-2,-1]
+        ];
+
+        for(const k of knight){
+
+            push(x+k[0],y+k[1]);
+
+        }
+
+    }
+
+    /* 사이프 */
+/* 사이프 */
+if(piece.type==="S"){
+
+    const diag = [
+        [1,1],[1,-1],
+        [-1,1],[-1,-1]
+    ];
+
+    for(const d of diag){
+
+        /* 1칸 */
+        push(x+d[0],y+d[1]);
+
+        /* 2칸 */
+        const mx = x+d[0];
+        const my = y+d[1];
+
+        const nx = x+d[0]*2;
+        const ny = y+d[1]*2;
+
+        if(
+            inside(nx,ny) &&
+            boardData[my][mx]==="X"
+        ){
+
+            push(nx,ny);
+
+        }
+
+    }
+
+    const emir =
+    hasAdjacentEmir(x,y,team);
+
+    if(emir){
+
+        const plus = [
+            [1,0],[-1,0],
+            [0,1],[0,-1]
+        ];
+
+        for(const p of plus){
+
+            push(x+p[0],y+p[1]);
+
+        }
+
+    }
+
+}
+
+    /* 에미르 */
+/* 에미르 */
+if(piece.type==="E"){
+
+    const emirMoves = [
+
+        [0,dir],
+        [1,0],[-1,0],
+        [0,-dir]
+
+    ];
+
+    for(const m of emirMoves){
+
+        push(x+m[0],y+m[1]);
+
+    }
+
+    /* 2칸 이동 */
+    const longMoves = [
+        [0,dir*2],
+        [2,0],[-2,0]
+    ];
+
+    for(const l of longMoves){
+
+        const mx = x + l[0]/2;
+        const my = y + l[1]/2;
+
+        const nx = x + l[0];
+        const ny = y + l[1];
+
+        if(
+            inside(nx,ny) &&
+            boardData[my][mx]==="X"
+        ){
+
+            push(nx,ny);
+
+        }
+
+    }
+
+}
+
+    /* 아타쉬르 */
+/* 아타쉬르 */
+if(piece.type==="A"){
+
+    /* 이동 */
+    for(let dx=-1;dx<=1;dx++){
+        for(let dy=-1;dy<=1;dy++){
+
+            if(dx===0 && dy===0) continue;
+
+            push(x+dx,y+dy);
+
+        }
+    }
+
+    /* 사격 */
+    const shots = [
+        [2,0],[-2,0],
+        [0,2],[0,-2],
+
+        [2,2],[2,-2],
+        [-2,2],[-2,-2]
+    ];
+
+    for(const s of shots){
+
+        const nx = x+s[0];
+        const ny = y+s[1];
+
+        if(!inside(nx,ny)) continue;
+
+        /* 중간 칸 */
+        const mx = x + s[0]/2;
+        const my = y + s[1]/2;
+
+        /* 중간 막혀있으면 사격 불가 */
+        if(boardData[my][mx] !== "X"){
+            continue;
+        }
+
+        const target = boardData[ny][nx];
+
+        if(
+            target!=="X" &&
+            target.team !== team
+        ){
+
+            /* 철갑 */
+            if(target.type==="S"){
+                continue;
+            }
+
+            moves.push({
+                x:nx,
+                y:ny,
+                shot:true
+            });
+
+        }
+
+    }
+
+}
+
+    /* 보병 */
+    if(piece.type==="P"){
+
+        const ny = y+dir;
+
+        if(
+            inside(x,ny) &&
+            boardData[ny][x]==="X"
+        ){
+
+            moves.push({
+                x:x,
+                y:ny
+            });
+
+        }
+
+        for(const dx of [-1,1]){
+
+            const nx = x+dx;
+
+            if(!inside(nx,ny)) continue;
+
+            const target = boardData[ny][nx];
+
+            if(
+                target!=="X" &&
+                target.team!==team
+            ){
+
+                moves.push({
+                    x:nx,
+                    y:ny,
+                    attack:true
+                });
+
+            }
+
+        }
+
+        const emir =
+        hasAdjacentEmir(x,y,team);
+
+        if(
+            emir &&
+            piece.commandCooldown===0
+        ){
+
+            const ny2 = y+dir*2;
+
+            if(
+                inside(x,ny2) &&
+                boardData[ny][x]==="X" &&
+                boardData[ny2][x]==="X"
+            ){
+
+                moves.push({
+                    x:x,
+                    y:ny2,
+                    command:true
+                });
+
+            }
+
+        }
+
+    }
+
+    return moves;
+
+}
+
+/* 이동 가능 여부 */
+function isMoveable(x,y){
+
+    return validMoves.some(
+        m=>m.x===x && m.y===y
+    );
+
+}
+
+/* 보드 그리기 */
+function drawBoard(){
+
+    board.innerHTML = "";
+
+    for(let y=0;y<10;y++){
+
+        for(let x=0;x<10;x++){
+
+            const cell =
+            document.createElement("div");
+
+            cell.classList.add("cell");
+
+            if((x+y)%2===0){
+                cell.classList.add("white");
+            }
+            else{
+                cell.classList.add("black");
+            }
+
+            const data = boardData[y][x];
+
+            if(isMoveable(x,y)){
+                cell.classList.add("moveable");
+            }
+
+            if(
+                selected &&
+                selected.x===x &&
+                selected.y===y
+            ){
+                cell.classList.add("selected");
+            }
+
+            if(data!=="X"){
+
+                if(data.team==="blue"){
+                    cell.classList.add("blueCell");
+                }
+
+                if(data.team==="red"){
+                    cell.classList.add("redCell");
+                }
+
+                const img =
+                document.createElement("img");
+
+                img.src =
+                pieceImages[data.type];
+
+                img.classList.add("piece");
+
+                if(data.stun>0){
+                    img.classList.add("stunned");
+                }
+
+                img.onerror = ()=>{
+                    cell.innerText = data.type;
+                };
+
+                cell.appendChild(img);
+
+            }
+
+            /* 클릭 */
+            cell.addEventListener("click",()=>{
+
+                /* 이동 */
+                if(
+                    selected &&
+                    isMoveable(x,y)
+                ){
+
+                    const movingPiece =
+                    boardData[selected.y][selected.x];
+
+                    const moveData =
+                    validMoves.find(
+                        m=>m.x===x && m.y===y
+                    );
+
+                    /* 궁병 저격 */
+                    if(moveData.shot){
+
+                        boardData[y][x] = "X";
+
+                        movingPiece.stun = 1;
+
+                    }
+
+                    /* 일반 이동 */
+                    else{
+
+                        if(moveData.command){
+                            movingPiece.commandCooldown = 1;
+                        }
+
+                        boardData[y][x] =
+                        movingPiece;
+
+                        boardData[selected.y][selected.x]
+                        = "X";
+
+                    }
+
+                    selected = null;
+                    validMoves = [];
+
+                    nextTurn();
+
+                    drawBoard();
+
+                    return;
+
+                }
+
+                /* 선택 */
+                if(
+                    data!=="X" &&
+                    data.team===currentTurn
+                ){
+
+                    selected = {x,y};
+
+                    validMoves =
+                    getValidMoves(x,y);
+
+                }
+                else{
+
+                    selected = null;
+                    validMoves = [];
+
+                }
+
+                drawBoard();
+
+            });
+
+            board.appendChild(cell);
+
+        }
+
+    }
+
+}
+
+updateTurnText();
+drawBoard();
+
+</script>
+
+</body>
+</html>
+```
