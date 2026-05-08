@@ -263,6 +263,9 @@ button:hover{
 const socket = io();
 </script>
 <body>
+
+    <div id="turnText"></div>
+    
 <div id="game">
 
     <div id="board"></div>
@@ -748,14 +751,6 @@ if(piece.type==="A"){
 
         if(!inside(nx,ny)) continue;
 
-        /* 중간 칸 */
-        const mx = x + s[0]/2;
-        const my = y + s[1]/2;
-
-        /* 중간 막혀있으면 사격 불가 */
-        if(boardData[my][mx] !== "X"){
-            continue;
-        }
 
         const target = boardData[ny][nx];
 
@@ -956,7 +951,7 @@ function drawBoard(){
 
                         boardData[y][x] = "X";
 
-                        movingPiece.stun = 1;
+                        movingPiece.stun = 2;
 
                     }
 
@@ -1063,6 +1058,26 @@ document
     });
 
 };
+
+socket.on("join_failed",()=>{
+
+    alert("참가 실패");
+
+    matchStatus.innerText =
+    "상태 : 실패";
+
+});
+
+socket.on("enemy_left",()=>{
+
+    alert("상대가 나감");
+
+    onlineMode = false;
+
+    matchStatus.innerText =
+    "상태 : 상대 나감";
+
+});
 
 socket.on("matched",(data)=>{
 
