@@ -256,6 +256,13 @@ button:hover{
 
     text-align:center;
 }
+
+#kingCallBtn{
+
+    background:#9c27b0;
+    color:white;
+
+}
 </style>
 </head>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -292,6 +299,9 @@ socket.on("disconnect",(reason)=>{
 <div id="game">
 
     <div id="board"></div>
+    <button id="kingCallBtn">
+    왕의 호출
+    </button>
 
     <div id="sidePanel">
 
@@ -337,7 +347,8 @@ function makePiece(type,team){
         team:team,
 
         stun:0,
-        commandCooldown:0
+        commandCooldown:0,
+        calledStun:0
     };
 
 }
@@ -428,6 +439,10 @@ let selected = null;
 let onlineMode = false;
 let myTeam = null;
 let currentRoom = null;
+let kingCallUsed = {
+    red:false,
+    blue:false
+};
 
 /* 턴 표시 */
 function updateTurnText(){
@@ -521,8 +536,14 @@ function nextTurn(){
 
             if(piece.commandCooldown>0){
                 piece.commandCooldown--;
-            }
+                }
 
+            if(
+                piece.calledStun>0 &&
+                piece.team===currentTurn
+                ){
+                    piece.calledStun--;
+                }
         }
     }
 
@@ -538,6 +559,8 @@ function getValidMoves(x,y){
     if(piece==="X") return [];
 
     if(piece.stun>0) return [];
+
+    if(piece.calledStun>0) return [];
 
     const moves = [];
 
@@ -1083,6 +1106,99 @@ function simulateMove(
 
 }
 
+function useKingCall(team){
+
+    if(
+        kingCallUsed[team]
+    ){
+        return false;
+    }
+
+    if(
+        !isKingInCheck(team)
+    ){
+        return false;
+    }
+
+    const king =
+    findKing(team);
+
+    if(!king) return false;
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            const piece =
+            boardData[y][x];
+
+            if(
+                piece==="X" ||
+                piece.team!==team
+            ){
+                continue;
+            }
+
+            if(
+                piece.type!=="S" &&
+                piece.type!=="F"
+            ){
+                continue;
+            }
+
+            const dist =
+            Math.max(
+                Math.abs(x-king.x),
+                Math.abs(y-king.y)
+            );
+
+            if(dist>3) continue;
+
+            for(let dx=-1;dx<=1;dx++){
+                for(let dy=-1;dy<=1;dy++){
+
+                    const nx =
+                    king.x + dx;
+
+                    const ny =
+                    king.y + dy;
+
+                    if(
+                        !inside(nx,ny)
+                    ) continue;
+
+                    if(
+                        boardData[ny][nx]!=="X"
+                    ) continue;
+
+                    boardData[ny][nx]
+                    = piece;
+
+                    boardData[y][x]
+                    = "X";
+
+                    piece.calledStun = 1;
+
+                    kingCallUsed[team]
+                    = true;
+
+                    drawBoard();
+
+                    alert(
+                        "왕의 호출 발동!"
+                    );
+
+                    return true;
+
+                }
+            }
+
+        }
+    }
+
+    return false;
+
+}
+
 /* 보드 그리기 */
 function drawBoard(){
 
@@ -1375,6 +1491,14 @@ document
 .onclick = ()=>{
 
     socket.emit("join_random");
+
+};
+
+document
+.getElementById("kingCallBtn")
+.onclick = ()=>{
+
+    useKingCall(currentTurn);
 
 };
 
