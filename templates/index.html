@@ -421,9 +421,9 @@ const board = document.getElementById("board");
 const turnText = document.getElementById("turnText");
 
 let currentTurn = "red";
+let validMoves = [];
 
 let selected = null;
-let validMoves = [];
 
 let onlineMode = false;
 let myTeam = null;
@@ -452,6 +452,14 @@ if(onlineMode){
     " / 내 팀 : " + myTeam;
 
 }
+
+}
+
+function getEnemyTeam(team){
+
+    return team==="red"
+    ? "blue"
+    : "red";
 
 }
 
@@ -880,6 +888,201 @@ function isMoveable(x,y){
 
 }
 
+function findKing(team){
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            const p = boardData[y][x];
+
+            if(
+                p!=="X" &&
+                p.team===team &&
+                p.type==="M"
+            ){
+                return {x,y};
+            }
+
+        }
+    }
+
+    return null;
+}
+
+function isKingInCheck(team,customBoard=null){
+
+    const boardRef =
+    customBoard || boardData;
+
+    let king = null;
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            const p = boardRef[y][x];
+
+            if(
+                p!=="X" &&
+                p.team===team &&
+                p.type==="M"
+            ){
+                king = {x,y};
+            }
+
+        }
+    }
+
+    if(!king) return true;
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            const p = boardRef[y][x];
+
+            if(
+                p==="X" ||
+                p.team===team
+            ) continue;
+
+            const oldBoard =
+            boardData;
+
+            boardData = boardRef;
+
+            const moves =
+            getValidMoves(x,y);
+
+            boardData = oldBoard;
+
+            for(const m of moves){
+
+                if(
+                    m.x===king.x &&
+                    m.y===king.y
+                ){
+                    return true;
+                }
+
+            }
+
+        }
+    }
+
+    return false;
+}
+
+function hasLegalMove(team){
+
+    for(let y=0;y<10;y++){
+        for(let x=0;x<10;x++){
+
+            const piece =
+            boardData[y][x];
+
+            if(
+                piece==="X" ||
+                piece.team!==team
+            ){
+                continue;
+            }
+
+            const moves =
+            getValidMoves(x,y);
+
+            for(const move of moves){
+
+                const fakeBoard =
+                simulateMove(
+                    boardData,
+                    x,
+                    y,
+                    move.x,
+                    move.y,
+                    move
+                );
+
+                if(
+                    !isKingInCheck(
+                        team,
+                        fakeBoard
+                    )
+                ){
+                    return true;
+                }
+
+            }
+
+        }
+    }
+
+    return false;
+}
+
+function isCheckmate(team){
+
+    if(
+        !isKingInCheck(team)
+    ){
+        return false;
+    }
+
+    return !hasLegalMove(team);
+
+}
+
+function endGame(winner){
+
+    alert(
+        (winner==="red"
+        ? "백적"
+        : "흑청")
+        + " 승리!"
+    );
+
+    onlineMode = false;
+
+}
+
+function cloneBoard(data){
+
+    return JSON.parse(
+        JSON.stringify(data)
+    );
+
+}
+
+function simulateMove(
+    board,
+    fromX,
+    fromY,
+    toX,
+    toY,
+    moveData
+){
+
+    const copy =
+    cloneBoard(board);
+
+    const piece =
+    copy[fromY][fromX];
+
+    if(moveData.shot){
+
+        copy[toY][toX] = "X";
+
+    }
+    else{
+
+        copy[toY][toX] = piece;
+
+        copy[fromY][fromX] = "X";
+
+    }
+
+    return copy;
+
+}
+
 /* 보드 그리기 */
 function drawBoard(){
 
@@ -970,16 +1173,43 @@ function drawBoard(){
                     );
 
                     /* 궁병 저격 */
-                    if(moveData.shot){
+                    /* 궁병 저격 */
+                if(moveData.shot){
 
-                        boardData[y][x] = "X";
+                    const deadPiece =
+                    boardData[y][x];
 
-                        movingPiece.stun = 2;
+                    if(
+                        deadPiece!=="X" &&
+                        deadPiece.type==="M"
+                    ){
 
+                        endGame(movingPiece.team);
+
+                        return;
                     }
+
+                    boardData[y][x] = "X";
+
+                    movingPiece.stun = 2;
+
+                }
 
                     /* 일반 이동 */
                     else{
+
+                        const deadPiece =
+                        boardData[y][x];
+
+                        if(
+                            deadPiece!=="X" &&
+                            deadPiece.type==="M"
+                        ){
+
+                            endGame(movingPiece.team);
+
+                            return;
+                        }
 
                         if(moveData.command){
                             movingPiece.commandCooldown = 1;
@@ -997,6 +1227,32 @@ function drawBoard(){
                     validMoves = [];
 
                     nextTurn();
+
+                    /* 체크메이트 검사 */
+                    if(
+                        isCheckmate(currentTurn)
+                    ){
+
+                        endGame(
+                            getEnemyTeam(currentTurn)
+                        );
+
+                        return;
+                    }
+
+                    /* 체크 표시 */
+                    if(
+                        isKingInCheck(currentTurn)
+                    ){
+
+                        alert(
+                            (currentTurn==="red"
+                            ? "백적"
+                            : "흑청")
+                            + " 체크!"
+                        );
+
+                    }
 
                     drawBoard();
 
