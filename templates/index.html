@@ -1221,6 +1221,44 @@ function drawBoard(){
                         boardData[selected.y][selected.x]
                         = "X";
 
+                        /* 승급 */
+                        if(
+                            movingPiece.type==="P"
+                        ){
+
+                            if(
+                                (movingPiece.team==="red" && y===0)
+                                ||
+                                (movingPiece.team==="blue" && y===9)
+                            ){
+
+                                const promote =
+                                prompt(
+                                    "승급 선택: C/F/S/A",
+                                    "C"
+                                );
+
+                                const allow =
+                                ["C","F","S","A"];
+
+                                if(
+                                    allow.includes(promote)
+                                ){
+
+                                    movingPiece.type =
+                                    promote;
+
+                                }
+                                else{
+
+                                    movingPiece.type = "C";
+
+                                }
+
+                            }
+
+                        }
+
                     }
 
                     selected = null;
@@ -1282,8 +1320,35 @@ function drawBoard(){
 
                     selected = {x,y};
 
-                    validMoves =
+                    const rawMoves =
                     getValidMoves(x,y);
+
+                    validMoves = [];
+
+                    for(const move of rawMoves){
+
+                        const fakeBoard =
+                        simulateMove(
+                            boardData,
+                            x,
+                            y,
+                            move.x,
+                            move.y,
+                            move
+                        );
+
+                        if(
+                            !isKingInCheck(
+                                currentTurn,
+                                fakeBoard
+                            )
+                        ){
+
+                            validMoves.push(move);
+
+                        }
+
+                    }
 
                 }
                 else{
