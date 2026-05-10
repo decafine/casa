@@ -64,6 +64,53 @@ body{
     gap:16px;
 }
 
+#leftPanel{
+
+    width:240px;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:14px;
+}
+
+#recordBox{
+
+    background:#111;
+
+    border:2px solid #444;
+
+    border-radius:12px;
+
+    height:420px;
+
+    overflow-y:auto;
+
+    padding:10px;
+
+    box-sizing:border-box;
+}
+
+#recordTitle{
+
+    font-size:22px;
+    font-weight:bold;
+
+    margin-bottom:10px;
+
+    text-align:center;
+}
+
+#recordList{
+
+    display:flex;
+    flex-direction:column;
+
+    gap:6px;
+
+    font-size:15px;
+}
+
 #statusBox{
 
     display:flex;
@@ -268,7 +315,16 @@ button:hover{
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 const socket = io(window.location.origin,{
-    transports:["websocket","polling"]
+
+    transports:["websocket","polling"],
+
+    reconnection:true,
+    reconnectionAttempts:999999,
+    reconnectionDelay:1000,
+    reconnectionDelayMax:5000,
+
+    timeout:20000
+
 });
 
 socket.on("connect",()=>{
@@ -291,6 +347,24 @@ socket.on("disconnect",(reason)=>{
     console.log(reason);
 
 });
+
+socket.on("reconnect",()=>{
+
+    console.log("재연결 성공");
+
+    matchStatus.innerText =
+    "상태 : 재연결 성공";
+
+});
+
+socket.on("reconnect_attempt",()=>{
+
+    console.log("재연결 시도중");
+
+    matchStatus.innerText =
+    "상태 : 재연결 시도중";
+
+});
 </script>
 <body>
 
@@ -298,10 +372,31 @@ socket.on("disconnect",(reason)=>{
 
 <div id="game">
 
+        <div id="leftPanel">
+
+        <button id="kingCallBtn">
+            왕의 호출
+        </button>
+
+        <button id="surrenderBtn">
+            기권
+        </button>
+
+        <button id="drawBtn">
+            무승부 요청
+        </button>
+
+        <div id="recordBox">
+            <div id="recordTitle">
+                기보
+            </div>
+
+            <div id="recordList"></div>
+        </div>
+
+    </div>
+
     <div id="board"></div>
-    <button id="kingCallBtn">
-    왕의 호출
-    </button>
 
     <div id="sidePanel">
 
@@ -354,7 +449,7 @@ function makePiece(type,team){
 }
 
 /* 보드 */
-const boardData = [
+let boardData = [
 
 [
 makePiece("C","blue"),
@@ -443,6 +538,7 @@ let kingCallUsed = {
     red:false,
     blue:false
 };
+let moveHistory = [];
 
 /* 턴 표시 */
 function updateTurnText(){
@@ -1643,6 +1739,27 @@ document
 };
 
 document
+.getElementById("surrenderBtn")
+.onclick = ()=>{
+
+    const winner =
+    currentTurn==="red"
+    ? "blue"
+    : "red";
+
+    endGame(winner);
+
+};
+
+document
+.getElementById("drawBtn")
+.onclick = ()=>{
+
+    alert("무승부 요청 기능 준비중");
+
+};
+
+document
 .getElementById("joinRoomBtn")
 .onclick = ()=>{
 
@@ -1668,6 +1785,7 @@ document
     });
 
 };
+
 
 updateTurnText();
 drawBoard();
