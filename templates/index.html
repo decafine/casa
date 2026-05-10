@@ -449,7 +449,7 @@ function makePiece(type,team){
 }
 
 /* 보드 */
-let boardData = [
+let boardRef = [
 
 [
 makePiece("C","blue"),
@@ -540,6 +540,19 @@ let kingCallUsed = {
 };
 let moveHistory = [];
 
+const notation =
+makeNotation(
+    movingPiece,
+    selected.x,
+    selected.y,
+    x,
+    y,
+    moveData,
+    capturedPiece
+);
+
+addRecord(notation);
+
 /* 턴 표시 */
 function updateTurnText(){
 
@@ -594,7 +607,7 @@ function hasAdjacentEmir(x,y,team){
 
             if(!inside(nx,ny)) continue;
 
-            const target = boardData[ny][nx];
+            const target = boardRef[ny][nx];
 
             if(
                 target!=="X" &&
@@ -622,7 +635,7 @@ function nextTurn(){
     for(let y=0;y<10;y++){
         for(let x=0;x<10;x++){
 
-            const piece = boardData[y][x];
+            const piece = boardRef[y][x];
 
             if(piece==="X") continue;
 
@@ -648,11 +661,12 @@ function nextTurn(){
 }
 
 /* 이동 계산 */
-function getValidMoves(x,y){
+function getValidMoves(x,y,customBoard=null){
 
-    const piece = boardData[y][x];
+    const boardRef =
+    customBoard || boardRef;
 
-    if(piece==="X") return [];
+    const piece = boardRef[y][x];
 
     if(piece.stun>0) return [];
 
@@ -668,7 +682,7 @@ function getValidMoves(x,y){
 
         if(!inside(nx,ny)) return;
 
-        const target = boardData[ny][nx];
+        const target = boardRef[ny][nx];
 
         if(target==="X"){
 
@@ -720,7 +734,7 @@ function getValidMoves(x,y){
 
             while(inside(nx,ny)){
 
-                const target = boardData[ny][nx];
+                const target = boardRef[ny][nx];
 
                 if(target==="X"){
 
@@ -796,7 +810,7 @@ if(piece.type==="S"){
 
         if(
             inside(nx,ny) &&
-            boardData[my][mx]==="X"
+            boardRef[my][mx]==="X"
         ){
 
             push(nx,ny);
@@ -859,7 +873,7 @@ if(piece.type==="E"){
 
         if(
             inside(nx,ny) &&
-            boardData[my][mx]==="X"
+            boardRef[my][mx]==="X"
         ){
 
             push(nx,ny);
@@ -902,7 +916,7 @@ if(piece.type==="A"){
         if(!inside(nx,ny)) continue;
 
 
-        const target = boardData[ny][nx];
+        const target = boardRef[ny][nx];
 
         if(
             target!=="X" &&
@@ -933,7 +947,7 @@ if(piece.type==="A"){
 
         if(
             inside(x,ny) &&
-            boardData[ny][x]==="X"
+            boardRef[ny][x]==="X"
         ){
 
             moves.push({
@@ -949,7 +963,7 @@ if(piece.type==="A"){
 
             if(!inside(nx,ny)) continue;
 
-            const target = boardData[ny][nx];
+            const target = boardRef[ny][nx];
 
             if(
                 target!=="X" &&
@@ -978,8 +992,8 @@ if(piece.type==="A"){
 
             if(
                 inside(x,ny2) &&
-                boardData[ny][x]==="X" &&
-                boardData[ny2][x]==="X"
+                boardRef[ny][x]==="X" &&
+                boardRef[ny2][x]==="X"
             ){
 
                 moves.push({
@@ -1012,7 +1026,7 @@ function findKing(team){
     for(let y=0;y<10;y++){
         for(let x=0;x<10;x++){
 
-            const p = boardData[y][x];
+            const p = boardRef[y][x];
 
             if(
                 p!=="X" &&
@@ -1031,7 +1045,7 @@ function findKing(team){
 function isKingInCheck(team,customBoard=null){
 
     const boardRef =
-    customBoard || boardData;
+    customBoard || boardRef;
 
     let king = null;
 
@@ -1064,14 +1078,14 @@ function isKingInCheck(team,customBoard=null){
             ) continue;
 
             const oldBoard =
-            boardData;
+            boardRef;
 
-            boardData = boardRef;
+            boardRef = boardRef;
 
             const moves =
-            getValidMoves(x,y);
+            getValidMoves(x,y,boardRef);
 
-            boardData = oldBoard;
+            boardRef = oldBoard;
 
             for(const m of moves){
 
@@ -1096,7 +1110,7 @@ function hasLegalMove(team){
         for(let x=0;x<10;x++){
 
             const piece =
-            boardData[y][x];
+            boardRef[y][x];
 
             if(
                 piece==="X" ||
@@ -1112,7 +1126,7 @@ function hasLegalMove(team){
 
                 const fakeBoard =
                 simulateMove(
-                    boardData,
+                    boardRef,
                     x,
                     y,
                     move.x,
@@ -1146,6 +1160,105 @@ function isCheckmate(team){
     }
 
     return !hasLegalMove(team);
+
+}
+
+function addRecord(text){
+
+    moveHistory.push(text);
+
+    const recordList =
+    document.getElementById("recordList");
+
+    const div =
+    document.createElement("div");
+
+    div.innerText =
+    (moveHistory.length) + ". " + text;
+
+    recordList.appendChild(div);
+
+    recordList.scrollTop =
+    recordList.scrollHeight;
+
+}
+
+function posToNotation(x,y){
+
+    const file =
+    String.fromCharCode(97 + x);
+
+    const rank =
+    10 - y;
+
+    return file + rank;
+
+}
+
+function makeNotation(
+    piece,
+    fromX,
+    fromY,
+    toX,
+    toY,
+    moveData,
+    capturedPiece=null
+){
+
+    const pieceLetter =
+    piece.type==="P"
+    ? ""
+    : piece.type;
+
+    const from =
+    posToNotation(fromX,fromY);
+
+    const to =
+    posToNotation(toX,toY);
+
+    /* 궁병 저격 */
+    if(moveData.shot){
+
+        return (
+            "A*" + to
+        );
+
+    }
+
+    /* 포획 */
+    if(capturedPiece!=="X" &&
+       capturedPiece!==null){
+
+        if(piece.type==="P"){
+
+            return (
+                from[0] +
+                "x" +
+                to
+            );
+
+        }
+
+        return (
+            pieceLetter +
+            "x" +
+            to
+        );
+
+    }
+
+    /* 일반 이동 */
+    let text =
+    pieceLetter + to;
+
+    /* 지휘 */
+    if(moveData.command){
+
+        text += "^";
+
+    }
+
+    return text;
 
 }
 
@@ -1225,7 +1338,7 @@ function useKingCall(team){
         for(let x=0;x<10;x++){
 
             const piece =
-            boardData[y][x];
+            boardRef[y][x];
 
             if(
                 piece==="X" ||
@@ -1263,19 +1376,25 @@ function useKingCall(team){
                     ) continue;
 
                     if(
-                        boardData[ny][nx]!=="X"
+                        boardRef[ny][nx]!=="X"
                     ) continue;
 
-                    boardData[ny][nx]
+                    boardRef[ny][nx]
                     = piece;
 
-                    boardData[y][x]
+                    boardRef[y][x]
                     = "X";
 
                     piece.calledStun = 1;
 
                     kingCallUsed[team]
                     = true;
+
+                    addRecord(
+                        "[KC] " +
+                        piece.type +
+                        posToNotation(nx,ny)
+                    );
 
                     drawBoard();
 
@@ -1316,7 +1435,7 @@ function drawBoard(){
                 cell.classList.add("black");
             }
 
-            const data = boardData[y][x];
+            const data = boardRef[y][x];
 
             if(isMoveable(x,y)){
                 cell.classList.add("moveable");
@@ -1377,7 +1496,10 @@ function drawBoard(){
                 ){
 
                     const movingPiece =
-                    boardData[selected.y][selected.x];
+                    boardRef[selected.y][selected.x];
+
+                    const capturedPiece =
+                    boardData[y][x];
 
                     const moveData =
                     validMoves.find(
@@ -1389,7 +1511,7 @@ function drawBoard(){
                 if(moveData.shot){
 
                     const deadPiece =
-                    boardData[y][x];
+                    boardRef[y][x];
 
                     if(
                         deadPiece!=="X" &&
@@ -1401,7 +1523,7 @@ function drawBoard(){
                         return;
                     }
 
-                    boardData[y][x] = "X";
+                    boardRef[y][x] = "X";
 
                     movingPiece.stun = 2;
 
@@ -1411,7 +1533,7 @@ function drawBoard(){
                     else{
 
                         const deadPiece =
-                        boardData[y][x];
+                        boardRef[y][x];
 
                         if(
                             deadPiece!=="X" &&
@@ -1427,10 +1549,10 @@ function drawBoard(){
                             movingPiece.commandCooldown = 1;
                         }
 
-                        boardData[y][x] =
+                        boardRef[y][x] =
                         movingPiece;
 
-                        boardData[selected.y][selected.x]
+                        boardRef[selected.y][selected.x]
                         = "X";
 
                         /* 승급 */
@@ -1460,6 +1582,10 @@ function drawBoard(){
                                     movingPiece.type =
                                     promote;
 
+                                        moveHistory[
+                                        moveHistory.length-1
+                                    ] += "=" + promote;
+
                                 }
                                 else{
 
@@ -1477,17 +1603,25 @@ function drawBoard(){
                     validMoves = [];
 
                     nextTurn();
+                    
+                    moveHistory[
+                        moveHistory.length-1
+                    ] += "+";
 
-                    /* 체크메이트 검사 */
                     if(
                         isCheckmate(currentTurn)
                     ){
+
+                        moveHistory[
+                            moveHistory.length-1
+                        ] += "#";
 
                         endGame(
                             getEnemyTeam(currentTurn)
                         );
 
                         return;
+
                     }
 
                     /* 체크 표시 */
@@ -1512,7 +1646,7 @@ function drawBoard(){
 
         room:currentRoom,
 
-        boardData:boardData,
+        boardRef:boardRef,
 
         currentTurn:currentTurn
 
@@ -1541,7 +1675,7 @@ function drawBoard(){
 
                         const fakeBoard =
                         simulateMove(
-                            boardData,
+                            boardRef,
                             x,
                             y,
                             move.x,
@@ -1689,8 +1823,8 @@ socket.on("opponent_move",(data)=>{
     for(let y=0;y<10;y++){
         for(let x=0;x<10;x++){
 
-            boardData[y][x] =
-            data.boardData[y][x];
+            boardRef[y][x] =
+            data.boardRef[y][x];
 
         }
     }

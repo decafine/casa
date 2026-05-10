@@ -8,7 +8,10 @@ app = Flask(__name__)
 
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*"
+    cors_allowed_origins="*",
+    ping_timeout=30,
+    ping_interval=10,
+    async_mode="threading"
 )
 
 waiting_player = None
@@ -237,10 +240,17 @@ def disconnect():
     for room in remove_rooms:
         del rooms_data[room]
 
+rooms_data[room] = {
+    "red": waiting_player,
+    "blue": sid,
+    "board": None,
+    "turn": "red"
+}
 
 if __name__ == "__main__":
-    socketio.run(
-        app,
-        host="0.0.0.0",
-        port=5000
-    )
+        socketio.run(
+            app,
+            host="0.0.0.0",
+            port=5000,
+            allow_unsafe_werkzeug=True
+        )
